@@ -19,7 +19,7 @@ pkg update -y && pkg install -y proot-distro wget curl tar ffmpeg
 echo "[+] Configuring Ubuntu environment..."
 proot-distro login ubuntu -- bash -c '
 set -e
-apt update && apt install -y wget curl libicu74 libfontconfig1 ca-certificates
+apt update && apt install -y wget curl libicu76 libfontconfig1 ca-certificates
 
 # --- Create Jellyfin directory ---
 mkdir -p /opt/jellyfin
