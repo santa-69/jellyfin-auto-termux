@@ -26,20 +26,15 @@ EOF
   chmod +x /etc/profile.d/02-dotnet-fix.sh
 "
 
-echo "== Re-entering Ubuntu to install Jellyfin =="
+echo "== Installing Jellyfin from official 22.04 (Jammy) repo =="
 proot-distro login ubuntu -- bash -c "
-  cd /root || cd ~
-  echo '== Downloading Jellyfin server package =='
-  wget -O jellyfin.deb https://repo.jellyfin.org/files/server/ubuntu/latest-stable/arm64/jellyfin-server_10.11.2+ubu2404_arm64.deb
-
-  echo '== Installing Jellyfin server =='
-  dpkg -i jellyfin.deb || apt install -f -y
-
-  echo '== Launching Jellyfin in background =='
+  apt update && apt upgrade -y
+  apt install -y wget curl gnupg ffmpeg apt-transport-https
+  wget -O- https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | gpg --dearmor -o /usr/share/keyrings/jellyfin.gpg
+  echo 'deb [signed-by=/usr/share/keyrings/jellyfin.gpg] https://repo.jellyfin.org/ubuntu jammy main' > /etc/apt/sources.list.d/jellyfin.list
+  apt update
+  apt install -y jellyfin
   nohup jellyfin > jellyfin.log 2>&1 &
-  echo 'Jellyfin server started (check jellyfin.log for details)'
 "
 
-echo "== Installation complete! =="
-echo "Access Jellyfin from your Android browser at: http://localhost:8096"
 
