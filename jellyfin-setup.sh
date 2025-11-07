@@ -13,8 +13,8 @@ set -e
 echo "[+] Updating Termux and installing tools..."
 pkg update -y && pkg install -y proot-distro wget curl tar ffmpeg
 
-echo "[+] Installing Ubuntu 24.04 LTS..."
-proot-distro install ubuntu
+#echo "[+] Installing Ubuntu 24.04 LTS..."
+#proot-distro install ubuntu
 
 echo "[+] Configuring Ubuntu environment..."
 proot-distro login ubuntu -- bash -c '
