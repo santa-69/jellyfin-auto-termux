@@ -1,64 +1,45 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# ====================================================
-# Jellyfin Server Auto-Installer for Termux on Android
-# ----------------------------------------------------
-# • Installs Ubuntu 24.04 LTS via proot-distro
-# • Downloads portable ARM64 Jellyfin build
-# • Links to Termux's ffmpeg
-# • Creates easy start script:  start-jellyfin
-# ====================================================
+# ===========================================
+# Jellyfin Server installer for Termux + Proot Ubuntu
+# Author: Andrew Dore
+# Platform: Android (Termux)
+# ===========================================
 
 set -e
 
-echo "[+] Updating Termux and installing tools..."
-pkg update -y && pkg install -y proot-distro wget curl tar ffmpeg
+echo "== Updating Termux and installing prerequisites =="
+pkg update -y && pkg upgrade -y
+pkg install -y proot-distro ffmpeg wget curl gnupg nano sudo
 
-echo "[+] Installing Ubuntu"
-proot-distro install ubuntu
+echo "== Installing Ubuntu rootfs via proot-distro =="
+proot-distro install ubuntu || true
 
-echo "[+] Configuring Ubuntu environment..."
-proot-distro login ubuntu -- bash -c '
-set -e
-apt update && apt install -y wget curl libicu76 libfontconfig1 ca-certificates
+echo "== Performing first setup in Ubuntu environment =="
+proot-distro login ubuntu -- bash -c "
+  apt update && apt upgrade -y
+  apt install -y wget sudo curl gnupg ffmpeg nano
 
-# --- Create Jellyfin directory ---
-mkdir -p /opt/jellyfin
-cd /opt/jellyfin
-
-echo "[+] Downloading Jellyfin portable ARM64 build..."
-wget https://repo.jellyfin.org/files/server/linux/latest-stable/arm64/jellyfin_10.10.6-arm64.tar.gz -O jellyfin.tar.gz
-
-echo "[+] Extracting Jellyfin..."
-tar xzf jellyfin.tar.gz && rm jellyfin.tar.gz
-mkdir -p data cache config log
-
-# --- Create start script ---
-cat <<'"EOF"' > /usr/local/bin/start-jellyfin
-#!/bin/bash
-JELLYFINDIR="/opt/jellyfin"
-FFMPEG_TERMUX="/data/data/com.termux/files/usr/bin/ffmpeg"
-
-echo "[+] Starting Jellyfin..."
-"$JELLYFINDIR/jellyfin/jellyfin" \
-  -d "$JELLYFINDIR/data" \
-  -C "$JELLYFINDIR/cache" \
-  -c "$JELLYFINDIR/config" \
-  -l "$JELLYFINDIR/log" \
-  --ffmpeg "$FFMPEG_TERMUX" \
-  >> "$JELLYFINDIR/log/jellyfin.out" 2>&1 &
-
-echo "✅ Jellyfin started at http://localhost:8096"
+  echo '== Applying .NET memory fix for Jellyfin =='
+  cat > /etc/profile.d/02-dotnet-fix.sh <<'EOF'
+export DOTNET_GCHeapHardLimit=1C0000000
 EOF
-chmod +x /usr/local/bin/start-jellyfin
-'
+  chmod +x /etc/profile.d/02-dotnet-fix.sh
+"
 
-echo
-echo "✅ Installation complete!"
-echo
-echo "To start your Jellyfin server:"
-echo "  proot-distro login ubuntu -- start-jellyfin"
-echo
-echo "Then open http://localhost:8096 in your browser or Jellyfin app."
-echo
-echo "Tip: use 'nohup proot-distro login ubuntu -- start-jellyfin &' to keep it running in background."
+echo "== Re-entering Ubuntu to install Jellyfin =="
+proot-distro login ubuntu -- bash -c "
+  cd /root || cd ~
+  echo '== Downloading Jellyfin server package =='
+  wget -O jellyfin.deb https://repo.jellyfin.org/files/server/ubuntu/latest-stable/arm64/jellyfin-server_10.11.2+ubu2404_arm64.deb
+
+  echo '== Installing Jellyfin server =='
+  dpkg -i jellyfin.deb || apt install -f -y
+
+  echo '== Launching Jellyfin in background =='
+  nohup jellyfin > jellyfin.log 2>&1 &
+  echo 'Jellyfin server started (check jellyfin.log for details)'
+"
+
+echo "== Installation complete! =="
+echo "Access Jellyfin from your Android browser at: http://localhost:8096"
 
